@@ -1,0 +1,82 @@
+server:
+  port: ${PORT:${SERVER_PORT:8080}}
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: omnimart-ai
+  datasource:
+    url: jdbc:h2:mem:omnimartdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=USER,VALUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# ---------------- AI LAYER ----------------
+ai:
+  provider: ${AI_PROVIDER:nvidia}
+  nvidia:
+    api-keys: ${NVIDIA_API_KEYS:}
+    model: ${NVIDIA_MODEL:nvidia/nemotron-3-ultra-550b-a55b}
+    base-url: ${NVIDIA_BASE_URL:https://integrate.api.nvidia.com/v1}
+    timeout-ms: 2500
+  local:
+    base-url: ${LOCAL_AI_BASE_URL:http://localhost:8000/v1}
+    model: ${LOCAL_AI_MODEL:nvidia/nemotron-3-nano-30b-a3b}
+
+# ---------------- BREVO EMAIL ----------------
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  sender-email: ${BREVO_SENDER_EMAIL:shubhkumarsinha192@gmail.com}
+  sender-name: ${BREVO_SENDER_NAME:OmniMart AI}
+  base-url: https://api.brevo.com/v3/smtp/email
+
+# ---------------- APPLICATION ----------------
+app:
+  secret: ${APP_SECRET:omnimart-secure-enterprise-jwt-key-2026-super-secret}
+  otp:
+    ttl-minutes: 5
+    max-attempts: 5
+    digits: 6
+    dev-mode: true
+  shipping:
+    free-above: 4999
+    fee: 49
+
+logging:
+  level:
+    com.example.aistore: INFO
+    org.hibernate.SQL: WARN
