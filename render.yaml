@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: omnimart-ai
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./omnimart.db
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: NVIDIA_API_KEYS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        value: shubhkumarsinha192@gmail.com
+      - key: BREVO_SENDER_NAME
+        value: OmniMart AI
+      - key: AI_PROVIDER
+        value: nvidia

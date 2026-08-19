@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Environment / secrets - NEVER commit live keys
+.env
+
+# Database (seeded locally; recreated on boot)
+omnimart.db
+*.sqlite3
+
+# Debug scratch files
+_dbg*.py
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
