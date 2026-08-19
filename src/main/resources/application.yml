@@ -49,7 +49,7 @@ management:
 ai:
   provider: ${AI_PROVIDER:nvidia}
   nvidia:
-    api-keys: ${NVIDIA_API_KEYS:}
+    api-keys: ${NVIDIA_API_KEYS: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}
     model: ${NVIDIA_MODEL:nvidia/nemotron-3-ultra-550b-a55b}
     base-url: ${NVIDIA_BASE_URL:https://integrate.api.nvidia.com/v1}
     timeout-ms: 2500
@@ -59,7 +59,7 @@ ai:
 
 # ---------------- BREVO EMAIL ----------------
 brevo:
-  api-key: ${BREVO_API_KEY:}
+  api-key: ${BREVO_API_KEY:eyJhcGlfa2V5IjoieGtleXNpYi0yOTg1NTBiZjdjZDU3MjM0NDEwYWI3ZGM1YjkzNDM3NTNhNTQ0NWZhNDdhMGE4Y2FlN2JhNzcyMmM2ZTQwMDAwLUpPbllwdVlFUUIwdlpoZ1IifQ==}
   sender-email: ${BREVO_SENDER_EMAIL:shubhkumarsinha192@gmail.com}
   sender-name: ${BREVO_SENDER_NAME:OmniMart AI}
   base-url: https://api.brevo.com/v3/smtp/email
