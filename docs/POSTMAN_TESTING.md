@@ -53,8 +53,6 @@ Create a collection (or import the provided one) and add collection variables:
 | Variable | Initial value | Scope |
 |---|---|---|
 | `baseUrl` | `http://127.0.0.1:8080` | Collection |
-| `customerToken` | *(leave empty)* | Collection |
-| `adminToken` | *(leave empty)* | Collection |
 
 ### 3.2 Cookies — how auth works here
 
@@ -77,15 +75,11 @@ OmniMart AI
 ├── 0. Health & Meta
 ├── 1. Auth (register / login / logout / me)
 ├── 2. Storefront (categories, brands, products, reviews)
-├── 3. Search & Compare (autocomplete, NL search, compare)
+├── 3. Search (autocomplete)
 ├── 4. Recommendations
 ├── 5. Cart & Checkout & Orders
-├── 6. Profile & Wishlist
-├── 7. Chat AI
-├── 8. Telemetry
-├── 9. OTP
-├── 10. Admin (requires admin login)
-└── 11. Error Cases
+├── 6. Wishlist
+└── 7. Error Cases
 ```
 
 ---
@@ -93,7 +87,7 @@ OmniMart AI
 ## 4. Endpoint reference
 
 > Legend — Auth: `public` = no cookie needed · `user` = needs `omnimart_session` of a
-> logged-in customer · `admin` = needs session of `admin@omnimart.com`.
+> logged-in customer.
 
 ### 4.0 Health & meta
 
@@ -106,7 +100,7 @@ OmniMart AI
 
 | Method | Path | Auth | Body / Params | Expected result |
 |---|---|---|---|---|
-| POST | `/register` | public | `{"email","password","full_name","phone?"}` | `201`-style UserDto JSON (status `200`); sets session cookie |
+| POST | `/register` | public | `{"email","password","full_name","phone?"}` | UserDto JSON; sets session cookie |
 | POST | `/login` | public | `{"email","password"}` | UserDto JSON; sets `omnimart_session` |
 | POST | `/logout` | user | — | `{"message": "Logged out"}`; clears cookie |
 | GET | `/me` | user | — | Current user profile JSON |
@@ -131,8 +125,8 @@ OmniMart AI
 |---|---|---|---|---|
 | GET | `/categories` | public | — | Active categories ordered by display order |
 | GET | `/brands` | public | — | Active brands |
-| GET | `/products` | public | `q`, `category`, `brand`, `min_price`, `max_price`, `min_rating`, `featured`, `sort` (`relevance\|price_asc\|price_desc\|rating\|newest`), `page`, `page_size` (≤60) | Paginated product cards + `total` + echoed `filters` |
-| GET | `/products/{slug}` | public (optional user) | path: product slug | Full detail: specs, images, latest 5 reviews, brand, category |
+| GET | `/products` | public | `q`, `category`, `brand`, `min_price`, `max_price`, `min_rating`, `featured`, `sort` (`relevance\|price_asc\|price_desc\|rating\|newest\|popular`), `page`, `page_size` (≤60) | Paginated product cards + `total` + echoed `filters` |
+| GET | `/products/{slug}` | public | path: product slug | Full detail: specs, images, latest 5 reviews, brand, category |
 | GET | `/products/id/{id}/related` | public | path: numeric id | 4 related product cards |
 | POST | `/products/{id}/reviews` | user | `{"rating":1-5,"title","comment","verified_purchase"}` | Created review; product aggregates updated; sentiment analyzed |
 
@@ -145,26 +139,17 @@ GET /products?category=smartphones&min_price=10000&max_price=60000&min_rating=4.
 **Errors:** `404` unknown slug/id · `409` duplicate review by same user ·
 `401` review without login.
 
-### 4.3 Search & Compare
+### 4.3 Search
 
-| Method | Path | Auth | Params / Body | Description |
+| Method | Path | Auth | Params | Description |
 |---|---|---|---|---|
 | GET | `/api/search/autocomplete` | public | `?q=iph` | Product name suggestions + popular queries |
-| POST | `/api/search/nl` | public | `{"query":"camera phone under 40k"}` | Natural-language search; returns parsed filters, `filters_hint`, matching cards |
-| GET | `/api/compare/data` | public | `?ids=1,5,9` (2–5 ids) | Spec matrix, identical cells, AI verdict |
 
-**NL search examples**
+**Example**
 
-```json
-{"query": "gaming laptops under 80000"}
-{"query": "recommend a flagship phone under 60000"}
-{"query": "sony headphones with anc"}
 ```
-
-Response includes `parsed` (category / brand / min_price / max_price / min_rating /
-tags), `filters_hint`, `products`, `total`.
-
-**Errors:** `400` empty query · `400` <2 ids or invalid ids · `400` >5 ids.
+GET /api/search/autocomplete?q=iphone
+```
 
 ### 4.4 Recommendations
 
@@ -199,82 +184,19 @@ All cart routes are anonymous-safe (create `cart_session` cookie automatically).
 `payment_method` allowed: `CREDIT_CARD`, `UPI`, `NET_BANKING`, `COD`.
 
 **Flow note:** use the same Postman window (or same cookie jar) as `/cart/add` so
-the cart cookie carries over. A customer must have ≥1 address (`POST /profile/address`)
-before checkout — otherwise `400 Invalid shipping address`.
+the cart cookie carries over. Customers have seeded addresses (e.g. `address_id=1`
+for `user@omnimart.com`) — checkout fails with `400` if the address does not belong
+to the logged-in user.
 
 **Errors:** `400` invalid address / empty cart / out of stock · `401` not logged in.
 
-### 4.6 Profile & Wishlist (all `user`)
+### 4.6 Wishlist (all `user`)
 
-| Method | Path | Body / Params | Description |
+| Method | Path | Params | Description |
 |---|---|---|---|
-| GET | `/profile` | — | Profile + addresses + AI preferences |
-| POST | `/profile/address` | `{"street_address","city","postal_code","phone","is_default":true}` | Add address; first/default address becomes default |
-| PUT | `/profile/preferences` | `{"preferred_categories":{"Laptops":90},"preferred_brands":{"Apple":80},"max_budget":200000,"recommendations_enabled":true}` | Update AI preferences (partial update — omit keys you don't want to change) |
 | GET | `/wishlist` | — | Wishlist products |
 | POST | `/wishlist/add` | `?product_id=9` (query param) | Add to wishlist |
 | POST | `/wishlist/remove` | `?product_id=9` | Remove from wishlist |
-
-### 4.7 Chat AI
-
-| Method | Path | Auth | Body | Description |
-|---|---|---|---|---|
-| POST | `/api/chat` | public / user | `{"message":"recommend a flagship phone under 60000"}` | Conversational AI with tool routing |
-
-**Body fields:** `message` (required), `conversation_id` (optional — pass the id from
-a previous response to continue a conversation), `current_product_id` (optional —
-context for questions about the currently viewed product).
-
-**Response fields:** `message` (reply), `conversation_id` (reuse for next turn),
-`candidate_products` (grounded product cards the reply refers to),
-`reasoning_summary`, `follow_up_suggestions`, `tool_used`, `active_provider`
-(`nvidia` when a key responds, else `mock`).
-
-**Multi-turn test sequence (one conversation):**
-
-1. `{"message": "recommend a flagship phone under 60000"}` → save `conversation_id`.
-2. `{"message": "compare the top two from above", "conversation_id": "<id>"}`
-3. `{"message": "what do customers say about the battery of the first one?", "conversation_id": "<id>"}`
-
-### 4.8 Telemetry
-
-| Method | Path | Auth | Body | Description |
-|---|---|---|---|---|
-| POST | `/api/telemetry/interaction` | public / user | `{"interaction_type":"FILTER_APPLY","category_name":"Laptops","session_id":"sess-123"}` | Records behavior signal (powers recommendations + admin BI) |
-
-`interaction_type` allowed: `PRODUCT_VIEW`, `SEARCH`, `ADD_TO_CART`,
-`REMOVE_FROM_CART`, `ADD_TO_WISHLIST`, `PRODUCT_PURCHASE`, `PRODUCT_COMPARE`,
-`FILTER_APPLY`.
-
-### 4.9 OTP (email login)
-
-> Email dispatch requires the Brevo account to authorize the server's IP (see README).
-> Even when delivery fails, the OTP is generated in-memory and can be tested in
-> DEBUG/dev mode by reading it from the server logs.
-
-| Method | Path | Auth | Body | Description |
-|---|---|---|---|---|
-| POST | `/api/otp/send` | public | `{"email":"user@omnimart.com","name":"Rahul","purpose":"LOGIN"}` | Generates 6-digit OTP (5-min TTL, 5 attempts) and emails it |
-| POST | `/api/otp/verify` | public | `{"email":"user@omnimart.com","otp":"123456"}` | Validates OTP; on success auto-logs the user in (sets session cookie) |
-
-**Errors:** `400` wrong/expired/attempts-exceeded OTP.
-
-### 4.10 Admin (all `admin`)
-
-| Method | Path | Body | Description |
-|---|---|---|---|
-| GET | `/api/admin/analytics-data` | — | Revenue, orders, AOV, sentiment distribution, top negative topics, churn signals, top products, low-stock list, recent orders |
-| POST | `/api/admin/ask-ai` | `{"question":"What are customers complaining about?"}` | Deterministic BI answer grounded in live analytics |
-
-**Ask-AI example questions**
-
-```json
-{"question": "What is our revenue and top product?"}
-{"question": "What are customers complaining about?"}
-{"question": "How many users do we have and what is the average order value?"}
-```
-
-**Security check:** calling these with the *customer* session must return `403`.
 
 ---
 
@@ -288,83 +210,43 @@ context for questions about the currently viewed product).
    → `total > 0`, first product rating ≥ 4.5.
 4. `GET /products/samsung-galaxy-s25-ultra-5g` → specs/images/reviews populated.
 5. `GET /products/id/1/related` → 4 cards.
-6. `POST /api/search/nl` `{"query":"gaming laptops under 80000"}` → products
-   include `ASUS TUF Gaming F15`; `filters_hint` shows category/budget/tags.
-7. `GET /api/search/autocomplete?q=iphon` → product suggestions + query history.
-8. `GET /api/compare/data?ids=1,5,9` → `spec_matrix` rows, `identical_cells`,
-   `ai_verdict` text.
-9. `GET /api/recommendations?limit=4` → `strategy = popularity (anonymous)`.
+6. `GET /api/search/autocomplete?q=iphon` → product suggestions + query history.
+7. `GET /api/recommendations?limit=4` → `strategy = popularity (anonymous)`.
 
-### Flow B — Account lifecycle (customer)
+### Flow B — Account & wishlist (customer)
 
 1. `POST /register` with a fresh email → capture cookie automatically.
 2. `GET /me` → same email.
-3. `POST /profile/address` (street, city, `is_default: true`).
-4. `PUT /profile/preferences` → set `preferred_categories: {"Laptops": 90}`, `max_budget: 200000`.
-5. `GET /api/recommendations?limit=5` → `strategy = hybrid ...`, first card shows
-   "Matches preferred category" badge.
-6. `POST /wishlist/add?product_id=9` → list now contains the product.
-7. `POST /api/telemetry/interaction` (`PRODUCT_VIEW`, `product_id: 1`).
+3. `POST /wishlist/add?product_id=9` → list now contains the product.
+4. `POST /wishlist/remove?product_id=9` → list is empty again.
 
 ### Flow C — Cart → checkout → order
 
 1. `GET /cart` → empty cart, cookie `cart_session` created.
 2. `POST /cart/add` ×2 products.
 3. `POST /cart/update` (change a quantity).
-4. `POST /checkout` with `address_id` from Flow B → order number `OM...`, payment
-   `COMPLETED`, stock reserved.
+4. `POST /checkout` with `address_id=1` (customer account) → order number `OM...`,
+   payment `COMPLETED`, stock reserved.
 5. `GET /orders` → the new order is first.
 6. `GET /orders/{id}` → full detail.
 
-### Flow D — AI chat (multi-turn)
-
-1. `POST /api/chat` `{"message":"recommend a flagship phone under 60000"}` →
-   `tool_used = searchProducts`, ≥1 `candidate_products`, `active_provider` either
-   `nvidia` or `mock`. Save `conversation_id`.
-2. Second turn with `conversation_id`: "compare the top two from above" →
-   `tool_used = compareProducts`, reply contains a verdict.
-3. Third turn with same id: "what do customers say about the battery of the first
-   one?" → `tool_used = getProductFeedbackSummary`, reply references real review
-   counts from `candidate_products`.
-
-### Flow E — Reviews
+### Flow D — Reviews
 
 1. `POST /products/20/reviews` as customer
    `{"rating":4,"title":"Great","comment":"Excellent product, smooth performance and great value for money"}`.
 2. Verify `GET /products/{slug-of-20}` → `latest_reviews` shows the new review with
    your name, and `review_count` incremented.
 
-### Flow F — Admin (login as `admin@omnimart.com` / `admin123`)
-
-1. `GET /api/admin/analytics-data` → revenue ≈ `₹15,000,000+`, sentiment
-   distribution (Positive ≫ Negative), `top_negative_topics` populated.
-2. `POST /api/admin/ask-ai` with the three sample questions → answers quote live
-   numbers.
-3. **Negative check:** in a second Postman window, login as the customer and call
-   `GET /api/admin/analytics-data` → must return `403`.
-
-### Flow G — OTP
-
-1. `POST /api/otp/send` (email `user@omnimart.com`, purpose `LOGIN`) → read the OTP
-   from the server console (dev) or mailbox (prod).
-2. `POST /api/otp/verify` with the OTP → `authenticated: true`; the session cookie
-   is now set — `GET /me` works.
-3. Wrong OTP → `400` with a descriptive message.
-
-### Flow H — Error cases (contract checks)
+### Flow E — Error cases (contract checks)
 
 | Request | Expected |
 |---|---|
 | `POST /login` wrong password | `401` |
 | `POST /register` duplicate email | `409` |
 | `GET /products/does-not-exist` | `404` |
-| `POST /api/compare/data?ids=1` | `400` (need ≥2) |
-| `POST /api/compare/data?ids=1,2,3,4,5,6` | `400` (max 5) |
-| `POST /api/search/nl` empty body | `400` |
 | `POST /products/1/reviews` logged out | `401` |
 | `POST /checkout` logged out | `401` |
-| `GET /api/admin/analytics-data` as customer | `403` |
-| `POST /api/otp/verify` wrong OTP | `400` |
+| `POST /checkout` with another user's address | `400` |
 | `POST /register` short password | `422` |
 
 ---
@@ -376,14 +258,9 @@ context for questions about the currently viewed product).
   session — subsequent authenticated calls must use that window/cookie jar.
 - **Cart adoption:** a guest cart (`cart_session` cookie) is linked to your account
   at login/checkout. To see it, keep the same cookie jar between cart ops and login.
-- **NVIDIA vs mock provider:** chat calls try NVIDIA first (3 keys, ~2.5s timeout
-  each). If keys are exhausted/unreachable, the deterministic mock provider answers
-  with the same grounded tool results. Either is a successful test.
-- **OTP store is in-memory:** restarting the server invalidates outstanding OTPs.
-- **Email:** `POST /api/otp/send` and `email_receipt: true` at checkout return
-  success messages even if Brevo rejects delivery (IP authorization) — check
-  `email_delivered` field and server logs.
+- **Email:** checkout with `email_receipt: true` returns success even if Brevo
+  rejects delivery (IP authorization on the Brevo account) — check server logs.
 - **Re-seeding:** to reset data, delete `omnimart.db` and restart the server
   (lifespan re-seeds automatically).
 - **Rate/size limits:** `page_size ≤ 60`, `limit ≤ 24` (recommendations),
-  chat message ≤ 4000 chars, cart line quantity ≤ 99.
+  cart line quantity ≤ 99.

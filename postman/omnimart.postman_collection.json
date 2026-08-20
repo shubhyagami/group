@@ -1,1002 +1,779 @@
 {
-	"info": {
-		"_postman_id": "0f8b0f5a-3d2c-4e6a-9a1c-5b7d8e2f4a6b",
-		"name": "OmniMart AI",
-		"description": "Complete Postman collection for the OmniMart AI e-commerce backend. Auth is cookie-based: login/register set the omnimart_session cookie automatically; cart requests manage the cart_session cookie. See docs/POSTMAN_TESTING.md.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://127.0.0.1:8080"
-		},
-		{
-			"key": "customerEmail",
-			"value": "user@omnimart.com"
-		},
-		{
-			"key": "customerPassword",
-			"value": "password123"
-		},
-		{
-			"key": "adminEmail",
-			"value": "admin@omnimart.com"
-		},
-		{
-			"key": "adminPassword",
-			"value": "admin123"
-		},
-		{
-			"key": "conversationId",
-			"value": ""
-		},
-		{
-			"key": "orderId",
-			"value": ""
-		}
-	],
-	"item": [
-		{
-			"name": "0. Health & Meta",
-			"item": [
-				{
-					"name": "Health",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/health",
-							"host": ["{{baseUrl}}"],
-							"path": ["health"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "App info",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/",
-							"host": ["{{baseUrl}}"],
-							"path": [""]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "1. Auth",
-			"item": [
-				{
-					"name": "Register",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"demo.user@example.com\",\n  \"password\": \"secret123\",\n  \"full_name\": \"Demo User\",\n  \"phone\": \"9876543210\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/register",
-							"host": ["{{baseUrl}}"],
-							"path": ["register"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Login (customer)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('login status 200', () => pm.response.to.have.status(200));",
-									"pm.test('returns user', () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('customerEmail')));"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["login"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Login (admin)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["login"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Me (current user)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/me",
-							"host": ["{{baseUrl}}"],
-							"path": ["me"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Logout",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/logout",
-							"host": ["{{baseUrl}}"],
-							"path": ["logout"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "2. Storefront",
-			"item": [
-				{
-					"name": "Categories",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/categories",
-							"host": ["{{baseUrl}}"],
-							"path": ["categories"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Brands",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/brands",
-							"host": ["{{baseUrl}}"],
-							"path": ["brands"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Products with filters",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products?category=smartphones&min_price=10000&max_price=60000&min_rating=4.0&sort=rating&page=1&page_size=12",
-							"host": ["{{baseUrl}}"],
-							"path": ["products"],
-							"query": [
-								{ "key": "category", "value": "smartphones" },
-								{ "key": "min_price", "value": "10000" },
-								{ "key": "max_price", "value": "60000" },
-								{ "key": "min_rating", "value": "4.0" },
-								{ "key": "sort", "value": "rating" },
-								{ "key": "page", "value": "1" },
-								{ "key": "page_size", "value": "12" }
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Product detail by slug",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products/samsung-galaxy-s25-ultra-5g",
-							"host": ["{{baseUrl}}"],
-							"path": ["products", "samsung-galaxy-s25-ultra-5g"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Related products",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products/id/1/related",
-							"host": ["{{baseUrl}}"],
-							"path": ["products", "id", "1", "related"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Submit review (login first)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"rating\": 4,\n  \"title\": \"Great\",\n  \"comment\": \"Excellent product, smooth performance and great value for money\",\n  \"verified_purchase\": true\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/products/20/reviews",
-							"host": ["{{baseUrl}}"],
-							"path": ["products", "20", "reviews"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "3. Search & Compare",
-			"item": [
-				{
-					"name": "Autocomplete",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/search/autocomplete?q=iphon",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "search", "autocomplete"],
-							"query": [
-								{ "key": "q", "value": "iphon" }
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "NL search - gaming laptops",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"query\": \"gaming laptops under 80000\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/search/nl",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "search", "nl"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "NL search - flagship phone",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"query\": \"recommend a flagship phone under 60000\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/search/nl",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "search", "nl"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Compare products (1,5,9)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/compare/data?ids=1,5,9",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "compare", "data"],
-							"query": [
-								{ "key": "ids", "value": "1,5,9" }
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "4. Recommendations",
-			"item": [
-				{
-					"name": "Recommendations (anonymous)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/recommendations?limit=4",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "recommendations"],
-							"query": [
-								{ "key": "limit", "value": "4" }
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Recommendations (logged in - hybrid)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/recommendations?limit=5",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "recommendations"],
-							"query": [
-								{ "key": "limit", "value": "5" }
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "5. Cart, Checkout & Orders",
-			"item": [
-				{
-					"name": "View cart",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/cart",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Add to cart",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"product_id\": 9,\n  \"quantity\": 1\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/cart/add",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart", "add"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update cart quantity",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"product_id\": 9,\n  \"quantity\": 2\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/cart/update",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart", "update"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Remove from cart",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"product_id\": 9\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/cart/remove",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart", "remove"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Checkout (login + address required)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('checkout status 200', () => pm.response.to.have.status(200));",
-									"pm.collectionVariables.set('orderId', pm.response.json().id);",
-									"pm.test('order number present', () => pm.expect(pm.response.json().order_number).to.include('OM'));"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"address_id\": 1,\n  \"payment_method\": \"UPI\",\n  \"email_receipt\": false\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/checkout",
-							"host": ["{{baseUrl}}"],
-							"path": ["checkout"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "My orders",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/orders",
-							"host": ["{{baseUrl}}"],
-							"path": ["orders"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Order detail",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/orders/{{orderId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["orders", "{{orderId}}"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "6. Profile & Wishlist",
-			"item": [
-				{
-					"name": "Profile",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/profile",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Add address",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"street_address\": \"5, Park Street\",\n  \"city\": \"Kolkata\",\n  \"postal_code\": \"700016\",\n  \"phone\": \"9876543210\",\n  \"is_default\": true\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/profile/address",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile", "address"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update AI preferences",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"preferred_categories\": {\"Laptops\": 90},\n  \"preferred_brands\": {\"Apple\": 80},\n  \"max_budget\": 200000,\n  \"recommendations_enabled\": true\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/profile/preferences",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile", "preferences"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Wishlist",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/wishlist",
-							"host": ["{{baseUrl}}"],
-							"path": ["wishlist"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Wishlist add",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/wishlist/add?product_id=9",
-							"host": ["{{baseUrl}}"],
-							"path": ["wishlist", "add"],
-							"query": [
-								{ "key": "product_id", "value": "9" }
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Wishlist remove",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/wishlist/remove?product_id=9",
-							"host": ["{{baseUrl}}"],
-							"path": ["wishlist", "remove"],
-							"query": [
-								{ "key": "product_id", "value": "9" }
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "7. Chat AI",
-			"item": [
-				{
-					"name": "Turn 1 - recommend",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('chat ok', () => pm.response.to.have.status(200));",
-									"pm.collectionVariables.set('conversationId', pm.response.json().conversation_id);",
-									"pm.test('grounded products', () => pm.expect(pm.response.json().candidate_products.length).to.be.above(0));"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"message\": \"recommend a flagship phone under 60000\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/chat",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "chat"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Turn 2 - compare (reuses conversation)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"message\": \"compare the top two from above\",\n  \"conversation_id\": \"{{conversationId}}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/chat",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "chat"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Turn 3 - feedback (reuses conversation)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"message\": \"what do customers say about the battery of the first one?\",\n  \"conversation_id\": \"{{conversationId}}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/chat",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "chat"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "8. Telemetry",
-			"item": [
-				{
-					"name": "Record interaction",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"interaction_type\": \"PRODUCT_VIEW\",\n  \"product_id\": 1,\n  \"session_id\": \"postman-session-1\",\n  \"duration_seconds\": 15\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/telemetry/interaction",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "telemetry", "interaction"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "9. OTP",
-			"item": [
-				{
-					"name": "Send OTP",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"name\": \"Rahul\",\n  \"purpose\": \"LOGIN\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/otp/send",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "otp", "send"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Verify OTP",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"otp\": \"123456\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/otp/verify",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "otp", "verify"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "10. Admin",
-			"item": [
-				{
-					"name": "Analytics data (admin)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/analytics-data",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics-data"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Ask AI - revenue",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"question\": \"What is our revenue and top product?\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/ask-ai",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "ask-ai"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Ask AI - sentiment",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"question\": \"What are customers complaining about?\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/ask-ai",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "ask-ai"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Negative: customer hits admin API (expect 403)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/analytics-data",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "analytics-data"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "11. Error Cases",
-			"item": [
-				{
-					"name": "Login wrong password (expect 401)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"user@omnimart.com\",\n  \"password\": \"wrongpass\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["login"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Unknown product (expect 404)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/products/does-not-exist",
-							"host": ["{{baseUrl}}"],
-							"path": ["products", "does-not-exist"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Compare with 1 id (expect 400)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/compare/data?ids=1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "compare", "data"],
-							"query": [
-								{ "key": "ids", "value": "1" }
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Compare with 6 ids (expect 400)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/compare/data?ids=1,2,3,4,5,6",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "compare", "data"],
-							"query": [
-								{ "key": "ids", "value": "1,2,3,4,5,6" }
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Checkout logged out (expect 401)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"address_id\": 1,\n  \"payment_method\": \"UPI\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/checkout",
-							"host": ["{{baseUrl}}"],
-							"path": ["checkout"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Register short password (expect 422)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"x@y.com\",\n  \"password\": \"abc\",\n  \"full_name\": \"X Y\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/register",
-							"host": ["{{baseUrl}}"],
-							"path": ["register"]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "0f8b0f5a-3d2c-4e6a-9a1c-5b7d8e2f4a6b",
+    "name": "OmniMart AI",
+    "description": "Complete Postman collection for the OmniMart AI e-commerce backend. Auth is cookie-based: login/register set the omnimart_session cookie automatically; cart requests manage the cart_session cookie. See docs/POSTMAN_TESTING.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080"
+    },
+    {
+      "key": "customerEmail",
+      "value": "user@omnimart.com"
+    },
+    {
+      "key": "customerPassword",
+      "value": "password123"
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health & Meta",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "App info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo.user@example.com\",\n  \"password\": \"secret123\",\n  \"full_name\": \"Demo User\",\n  \"phone\": \"9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login (customer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('returns user', () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('customerEmail')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Me (current user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Storefront",
+      "item": [
+        {
+          "name": "Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Brands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/brands",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "brands"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Products with filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?category=smartphones&min_price=10000&max_price=60000&min_rating=4.0&sort=rating&page=1&page_size=12",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "smartphones"
+                },
+                {
+                  "key": "min_price",
+                  "value": "10000"
+                },
+                {
+                  "key": "max_price",
+                  "value": "60000"
+                },
+                {
+                  "key": "min_rating",
+                  "value": "4.0"
+                },
+                {
+                  "key": "sort",
+                  "value": "rating"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "12"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Product detail by slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/samsung-galaxy-s25-ultra-5g",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "samsung-galaxy-s25-ultra-5g"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Related products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/id/1/related",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "id",
+                "1",
+                "related"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit review (login first)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"title\": \"Great\",\n  \"comment\": \"Excellent product, smooth performance and great value for money\",\n  \"verified_purchase\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/20/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "20",
+                "reviews"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Search",
+      "item": [
+        {
+          "name": "Autocomplete",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search/autocomplete?q=iphon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "search",
+                "autocomplete"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "iphon"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Recommendations",
+      "item": [
+        {
+          "name": "Recommendations (anonymous)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations?limit=4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recommendations"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recommendations (logged in - hybrid)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/recommendations?limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recommendations"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Cart, Checkout & Orders",
+      "item": [
+        {
+          "name": "View cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add to cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 9,\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/add",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "add"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update cart quantity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 9,\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove from cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 9\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/remove",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "remove"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout (login + address required)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('checkout status 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('orderId', pm.response.json().id);",
+                  "pm.test('order number present', () => pm.expect(pm.response.json().order_number).to.include('OM'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address_id\": 1,\n  \"payment_method\": \"UPI\",\n  \"email_receipt\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "My orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Order detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Wishlist",
+      "item": [
+        {
+          "name": "Wishlist",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wishlist"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wishlist add",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist/add?product_id=9",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wishlist",
+                "add"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "9"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wishlist remove",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist/remove?product_id=9",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wishlist",
+                "remove"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "9"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "10. Error Cases",
+      "item": [
+        {
+          "name": "Login wrong password (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@omnimart.com\",\n  \"password\": \"wrongpass\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unknown product (expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/does-not-exist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "does-not-exist"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout logged out (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address_id\": 1,\n  \"payment_method\": \"UPI\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "checkout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register short password (expect 422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"x@y.com\",\n  \"password\": \"abc\",\n  \"full_name\": \"X Y\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "register"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
 }

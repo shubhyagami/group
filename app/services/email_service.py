@@ -32,19 +32,6 @@ def _template_shell(title: str, body_html: str) -> str:
 </div></body></html>"""
 
 
-def _otp_template(recipient_name: str, otp: str, purpose: str) -> str:
-    body = f"""
-    <p>Hello <strong>{recipient_name or 'there'}</strong>,</p>
-    <p>Use the verification code below to complete your <strong>{purpose.lower().replace('_', ' ')}</strong>:</p>
-    <div style="background:#0b1020;border:1px dashed #7c3aed;border-radius:10px;padding:18px;text-align:center;margin:18px 0;">
-      <span style="font-size:34px;font-weight:800;letter-spacing:10px;color:#a78bfa;">{otp}</span>
-    </div>
-    <p style="color:#9ca3af;font-size:13px;">This code expires in <strong>5 minutes</strong>. Never share it with anyone - OmniMart AI will never ask for your OTP.</p>
-    <p>If you didn't request this, you can safely ignore this email.</p>
-    """
-    return _template_shell(f"{purpose} - OTP Verification | OmniMart AI", body)
-
-
 def _invoice_template(recipient_name: str, order_number: str, final_amount: float, items_summary: str, tracking: str = "") -> str:
     body = f"""
     <p>Hello <strong>{recipient_name or 'there'}</strong>,</p>
@@ -105,16 +92,6 @@ class BrevoEmailService:
         except httpx.HTTPError as exc:
             logger.warning("Brevo unavailable: %s", exc)
             return False
-
-    def send_otp_email(self, recipient_email: str, recipient_name: str, otp_code: str, purpose: str = "VERIFICATION") -> bool:
-        return self._dispatch(
-            self._payload(
-                recipient_email,
-                recipient_name,
-                f"{purpose.replace('_', ' ').title()} OTP - {otp_code} | OmniMart AI",
-                _otp_template(recipient_name, otp_code, purpose),
-            )
-        )
 
     def send_order_confirmation_email(
         self,

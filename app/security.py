@@ -51,12 +51,6 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User |
     return user
 
 
-def get_current_admin(user: User = Depends(get_current_user)) -> User:
-    if not user.is_admin():
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return user
-
-
 def require_role(role: UserRole):
     def _guard(user: User = Depends(get_current_user)) -> User:
         if not user.has_role(role):

@@ -408,53 +408,6 @@ class UserInteraction(Base):
     user = relationship("User")
 
 
-class ChatConversation(Base):
-    __tablename__ = "chat_conversations"
-
-    id = Column(Integer, primary_key=True)
-    conversation_id = Column(String(64), unique=True, nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    session_id = Column(String(120), index=True)
-    title = Column(String(255))
-    created_at = Column(DateTime, default=utcnow, nullable=False)
-    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
-
-    user = relationship("User")
-    messages = relationship(
-        "ChatMessage", back_populates="conversation", cascade="all, delete-orphan", order_by="ChatMessage.id"
-    )
-
-
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-    __table_args__ = (Index("ix_chat_messages_conversation", "conversation_id"),)
-
-    id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey("chat_conversations.id"), nullable=False, index=True)
-    sender = Column(String(20), nullable=False)  # USER / ASSISTANT
-    content = Column(Text)  # up to 4000
-    tool_calls_json = Column(Text)
-    recommended_product_ids_json = Column(Text)
-    reasoning_summary = Column(Text)
-    created_at = Column(DateTime, default=utcnow, nullable=False)
-
-    conversation = relationship("ChatConversation", back_populates="messages")
-
-
-class AIRecommendationLog(Base):
-    __tablename__ = "ai_recommendation_logs"
-
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    query_text = Column(Text)
-    tool_used = Column(String(80))
-    product_ids_json = Column(Text)
-    generated_reasoning = Column(Text)
-    provider_used = Column(String(40))
-    execution_time_ms = Column(Integer, default=0)
-    created_at = Column(DateTime, default=utcnow, nullable=False)
-
-
 class MarketProduct(Base):
     __tablename__ = "market_products"
     __table_args__ = (Index("ix_market_product_competitor", "product_id", "competitor_name"),)

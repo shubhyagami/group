@@ -2,26 +2,109 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from ..ai.mock import MockAIProvider
 from ..models import CustomerFeedback, Product, Review, User
 
 SENTIMENT_GROUPS = ["Positive", "Negative", "Mixed", "Neutral"]
 TOPIC_GROUPS = ["Battery", "Display", "Camera", "Performance", "Delivery", "Audio", "Build Quality", "General"]
 
+TOPICS: list[tuple[str, list[str]]] = [
+    ("Battery", ["battery", "charging", "charge", "drain", "backup", "fast charging"]),
+    ("Display", ["display", "screen", "oled", "amoled", "panel", "refresh rate", "brightness", "bezels"]),
+    ("Camera", ["camera", "photo", "picture", "zoom", "video", "night mode", "portrait", "lens", "sensor"]),
+    ("Performance", ["performance", "speed", "processor", "ram", "lag", "smooth", "gaming", "heat", "thermal", "freeze", "crash"]),
+    ("Delivery", ["delivery", "shipping", "packaging", "courier", "arrived", "delivered", "dispatch"]),
+    ("Audio", ["audio", "sound", "bass", "speaker", "anc", "noise cancelling", "microphone", "mic", "treble"]),
+    ("Build Quality", ["build", "premium", "plastic", "finish", "durable", "solid", "fragile", "flimsy", "hinge"]),
+]
+
+NEGATIVE_SIGNALS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"battery.{0,30}(drain|short|poor|weak|dies|fast|low)", re.I), "Battery drains fast / short battery life"),
+    (re.compile(r"(overheat|thermal|throttl|heats? up)", re.I), "Thermal throttling / heating issues"),
+    (re.compile(r"(lag|freeze|stutter|crash|hang)", re.I), "Performance lag / app crashes"),
+    (re.compile(r"(blur|grainy|noisy|dark photo|low light)", re.I), "Camera quality in low light"),
+    (re.compile(r"(not worth|overpriced|pricey)", re.I), "Overpriced for the value"),
+    (re.compile(r"(broken|defect|faulty|dead on arrival|refund)", re.I), "Defective unit / DOA"),
+    (re.compile(r"(delay|late|never arrived|slow delivery)", re.I), "Slow / late delivery"),
+    (re.compile(r"(flimsy|cheap plastic|fragile|hinge)", re.I), "Build quality concerns"),
+    (re.compile(r"(noisy|hiss|no bass|muffled)", re.I), "Audio quality issues"),
+    (re.compile(r"(faded|washed|colors)", re.I), "Display color accuracy issues"),
+    (re.compile(r"(speaker|bluetooth).{0,25}(disconnect|drop|issue)", re.I), "Connectivity drops"),
+    (re.compile(r"(disappoint|worst|terrible|awful|poor|bad|issue|problem|unhappy|regret)", re.I), "Overall dissatisfaction"),
+]
+
+POSITIVE_SIGNALS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"(vibrant|stunning|gorgeous|razor sharp|bright) (display|screen|oled|amoled)", re.I), "Vibrant high-refresh display"),
+    (re.compile(r"(amazing|excellent|great|fantastic|superb|stellar) (camera|photo|picture|video)", re.I), "Excellent camera quality"),
+    (re.compile(r"(blazing|super fast|fast) (charging|charge)", re.I), "Fast charging support"),
+    (re.compile(r"(all.day|long battery|great battery|excellent battery|lasts)", re.I), "Long battery life"),
+    (re.compile(r"(smooth|buttery|fluid|snappy) (performance|experience|gaming)", re.I), "Smooth performance"),
+    (re.compile(r"(crystal clear|immersive|premium|fantastic) (audio|sound|bass)", re.I), "Premium audio quality"),
+    (re.compile(r"(1.day|next.day|super fast|lightning|quick) (delivery|shipping)", re.I), "Super-fast delivery"),
+    (re.compile(r"(premium|solid|great) (build|quality|finish)", re.I), "Premium build quality"),
+    (re.compile(r"(worth every|value for money|highly recommend|love it|best purchase)", re.I), "Great value for money"),
+    (re.compile(r"(noise cancellation|anc).{0,30}(impressive|excellent|great|works)", re.I), "Effective noise cancellation"),
+]
+
+
+def analyze_customer_feedback(review_text: str, rating: int) -> dict:
+    """Deterministic sentiment/emotion/topic classification from review text."""
+    text = review_text or ""
+    lower = text.lower()
+
+    topic_hits: dict[str, int] = {}
+    for topic, keywords in TOPICS:
+        topic_hits[topic] = sum(1 for kw in keywords if kw in lower)
+    primary_topic = max(topic_hits, key=topic_hits.get) if any(topic_hits.values()) else "General"
+
+    issues = [label for pattern, label in NEGATIVE_SIGNALS if pattern.search(lower)]
+    positives = [label for pattern, label in POSITIVE_SIGNALS if pattern.search(lower)]
+
+    has_neg = bool(issues)
+    has_pos = bool(positives)
+
+    if rating >= 4:
+        sentiment = "Positive"
+    elif rating <= 2:
+        sentiment = "Negative"
+    else:
+        sentiment = "Mixed" if has_neg and has_pos else "Neutral"
+
+    if sentiment == "Positive":
+        emotion = "Delighted" if rating >= 5 else "Satisfied"
+    elif sentiment == "Negative":
+        emotion = "Frustrated" if rating <= 1 else "Disappointed"
+    else:
+        emotion = "Neutral"
+
+    signal_count = len(issues) + len(positives)
+    confidence = min(0.99, 0.5 + 0.08 * signal_count) if signal_count else 0.42
+    if rating in (1, 5):
+        confidence = min(0.99, confidence + 0.05)
+
+    return {
+        "sentiment": sentiment,
+        "emotion": emotion,
+        "primary_topic": primary_topic,
+        "specific_issues": issues,
+        "positive_aspects": positives,
+        "confidence_score": round(confidence, 2),
+        "source": "REVIEW",
+    }
+
 
 class CustomerFeedbackService:
     def __init__(self, db: Session):
         self.db = db
-        self.nlp = MockAIProvider()
 
     # ------------------------------------------------------------ analysis
     def analyze_review(self, review: Review) -> CustomerFeedback:
-        analysis = self.nlp.analyze_customer_feedback(review.comment or "", review.rating)
+        analysis = analyze_customer_feedback(review.comment or "", review.rating)
         fb = (
             self.db.query(CustomerFeedback).filter(CustomerFeedback.review_id == review.id).first()
         )
@@ -47,7 +130,7 @@ class CustomerFeedbackService:
         return count
 
     def analyze_review_text(self, text: str, rating: int) -> dict:
-        return self.nlp.analyze_customer_feedback(text, rating)
+        return analyze_customer_feedback(text, rating)
 
     # ------------------------------------------------------------ summaries
     def product_feedback_summary(self, product_id: int) -> dict:

@@ -6,19 +6,173 @@ import re
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from ..ai.mock import MockAIProvider
 from ..models import Brand, Category, Product
 
 TEXT_STOPWORDS = {"the", "with", "and", "best", "good", "for", "me", "any", "some", "a", "an", "please"}
+
+# --------------------------------------------------------------------------
+# Natural-language search -> structured filters (deterministic NLP)
+# --------------------------------------------------------------------------
+CATEGORY_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("Smartphones", ["smartphone", "iphone", "mobile", "android phone", "galaxy", "handset", "xperia", "oneplus", " phone", " phones"]),
+    ("Laptops", ["laptop", "notebook", "macbook", "ultrabook", "thinkpad", "chromebook"]),
+    ("Headphones", ["headphone", "headset", "earbud", "earphone", "airpods", "buds", "anc headphone"]),
+    ("Gaming", ["gaming", "console", "playstation", "ps5", "controller", "gamepad", "joystick"]),
+    ("Smart Home", ["smart home", "smart tv", "television", "tv ", "soundbar", "robot vacuum", "refrigerator", "air purifier", "fridge", "washer", "dryer"]),
+    ("Cameras", ["camera", "mirrorless", "dslr", "vlogging", "photography", "vlog"]),
+    ("Accessories", ["accessory", "charger", "adapter", "keyboard", "mouse", "webcam", "case", "cable", "trackpad", "airtag"]),
+    ("Monitors", ["monitor", "display", "ultrawide", "oled monitor", "screen"]),
+]
+
+BRAND_NAMES = [
+    "Samsung", "Apple", "Sony", "Dell", "Lenovo", "ASUS", "HP", "Bose",
+    "OnePlus", "Logitech", "Canon", "LG",
+]
+
+FEATURE_TAGS = {
+    "anc": ["anc", "noise cancelling", "noise-cancelling", "noise canceling"],
+    "oled": ["oled", "amoled"],
+    "5g": ["5g"],
+    "gaming": ["gaming"],
+    "foldable": ["fold", "flip"],
+    "120hz": ["120hz", "120 hz", "high refresh"],
+    "hdr": ["hdr"],
+    "fast-charging": ["fast charging", "fast charge", "super fast"],
+    "water-resistant": ["water resistant", "ip68", "ip67"],
+}
+
+FILLER_WORDS = {
+    "recommend", "recommendations", "suggest", "please", "some", "good", "best", "great",
+    "want", "wanted", "looking", "look", "find", "find me", "show", "show me", "get",
+    "give", "need", "a", "an", "the", "me", "for", "i", "my", "with", "and", "or",
+    "of", "in", "under", "below", "within", "around", "above", "over", "budget",
+    "under", "price", "priced", "buy", "purchase", "which", "what", "help",
+}
+
+NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+
+
+def _normalize_amount(raw: str) -> float | None:
+    """'80k' -> 80000, '1.5l'/'1.5 lakh' -> 150000, '40000' -> 40000, '8,000' -> 8000."""
+    s = raw.strip().lower().replace(",", "").replace("₹", "").replace("rs", "").replace("inr", "").strip()
+    m = re.match(r"^(\d+(?:\.\d+)?)\s*(k|lakh|l|cr|crore)?$", s)
+    if not m:
+        return None
+    value = float(m.group(1))
+    suffix = m.group(2) or ""
+    if suffix == "k":
+        return value * 1000
+    if suffix in ("l", "lakh"):
+        return value * 100000
+    if suffix in ("cr", "crore"):
+        return value * 10000000
+    return value
+
+
+NUMBER_RE = r"\d[\d,]*(?:\.\d+)?\s*(?:k|lakh|l|cr|crore|rupees?|rs|inr)?"
+
+
+def _clean_search_query(raw: str) -> str:
+    cleaned = raw
+    patterns = [
+        rf"under\s+{NUMBER_RE}",
+        rf"below\s+{NUMBER_RE}",
+        rf"(?:up\s*to|upto)\s+{NUMBER_RE}",
+        rf"less\s+than\s+{NUMBER_RE}",
+        rf"(?:within|around|max(?:imum)?)\s+{NUMBER_RE}",
+        rf"(?:budget of\s+)?{NUMBER_RE}",
+        rf"above\s+{NUMBER_RE}",
+        rf"over\s+{NUMBER_RE}",
+        rf"more\s+than\s+{NUMBER_RE}",
+        rf"(?:minimum|min)\s+{NUMBER_RE}",
+        r"\d+\s*star",
+        r"\d+\s*\+?\s*rating",
+        r"(?:rating|rated)\s*(?:of|above|below|at)?\s*\d+(?:\.\d+)?",
+    ]
+    for p in patterns:
+        cleaned = re.sub(p, " ", cleaned, flags=re.IGNORECASE)
+
+    lower = cleaned.lower()
+    for filler in sorted(FILLER_WORDS, key=len, reverse=True):
+        lower = re.sub(rf"\b{re.escape(filler)}\b", " ", lower)
+    return re.sub(r"\s+", " ", lower).strip()
+
+
+def parse_nl(query: str) -> dict:
+    """Extract category/brand/budget/rating/tags from a natural-language query."""
+    raw = query or ""
+    lower = raw.lower()
+    parsed: dict = {
+        "raw_query": raw,
+        "query": None,
+        "category": None,
+        "brand": None,
+        "min_price": None,
+        "max_price": None,
+        "min_rating": None,
+        "tags": [],
+    }
+
+    for phrase in ("under", "below", "upto", "up to", "less than", "within", "max"):
+        m = re.search(rf"{phrase}\s+([\d.,]+\s*(?:k|lakh|l|cr|crore)?)", lower)
+        if m:
+            val = _normalize_amount(m.group(1))
+            if val is not None and (parsed["max_price"] is None or val < parsed["max_price"]):
+                parsed["max_price"] = val
+    for phrase in ("above", "over", "more than", "minimum", "min"):
+        m = re.search(rf"{phrase}\s+([\d.,]+\s*(?:k|lakh|l|cr|crore)?)", lower)
+        if m:
+            val = _normalize_amount(m.group(1))
+            if val is not None and (parsed["min_price"] is None or val > parsed["min_price"]):
+                parsed["min_price"] = val
+    m = re.search(r"(?:rs|rupees|inr|budget of)\s*([\d.,]+\s*(?:k|lakh|l|cr|crore)?)", lower)
+    if m:
+        val = _normalize_amount(m.group(1))
+        if val is not None:
+            parsed["max_price"] = min(parsed["max_price"] or val, val)
+
+    m = re.search(r"(\d+(?:\.\d+)?)\s*\+?\s*star", lower)
+    if not m:
+        m = re.search(r"(?:rating|rated)\s*(?:of|above)?\s*(\d+(?:\.\d+)?)", lower)
+    if m:
+        try:
+            parsed["min_rating"] = float(m.group(1))
+        except ValueError:
+            pass
+    for word, num in NUMBER_WORDS.items():
+        if re.search(rf"\b{word}\b.*\bstar", lower) or re.search(rf"\bstar\b.*\b{word}\b", lower):
+            parsed["min_rating"] = num
+            break
+
+    for cat, keywords in CATEGORY_KEYWORDS:
+        if any(kw in lower for kw in keywords):
+            parsed["category"] = cat
+            break
+    if not parsed["category"]:
+        for brand in ("iphone", "galaxy", "oneplus", "macbook", "xperia", "thinkpad"):
+            if brand in lower:
+                parsed["category"] = "Smartphones" if brand in ("iphone", "galaxy", "oneplus", "xperia") else "Laptops"
+                break
+
+    for brand in BRAND_NAMES:
+        if brand.lower() in lower:
+            parsed["brand"] = brand
+            break
+
+    for tag, keywords in FEATURE_TAGS.items():
+        if any(kw in lower for kw in keywords):
+            parsed["tags"].append(tag)
+
+    parsed["query"] = _clean_search_query(raw) or None
+    return parsed
 
 
 class SearchService:
     def __init__(self, db: Session):
         self.db = db
-        self.nlp = MockAIProvider()
 
     def parse_nl(self, query: str) -> dict:
-        return self.nlp.parse_natural_language_search(query)
+        return parse_nl(query)
 
     def _apply_query_filter(self, q, query: str):
         """Tokenized OR matching against name/tags/short description so NL

@@ -11,7 +11,6 @@ from ..security import get_current_user
 from ..services.cart_service import CartService
 from ..services.email_service import brevo_email_service
 from ..services.order_service import OrderService
-from ..services.telemetry_service import TelemetryService
 
 router = APIRouter(tags=["orders"])
 
@@ -31,7 +30,6 @@ def checkout(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    TelemetryService(db).record_interaction("PRODUCT_PURCHASE", user=user)
     db.commit()
 
     if payload.email_receipt:

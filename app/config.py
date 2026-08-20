@@ -51,32 +51,13 @@ class Settings(BaseSettings):
     SESSION_COOKIE_NAME: str = "omnimart_session"
     SESSION_MAX_AGE: int = 7 * 24 * 3600
 
-    # NVIDIA AI pool
-    NVIDIA_API_KEYS: str = ""
-    NVIDIA_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b"
-    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    AI_PROVIDER: str = "nvidia"  # nvidia | local | mock
-
-    # Local AI fallback (Ollama / vLLM)
-    LOCAL_AI_BASE_URL: str = "http://localhost:8000/v1"
-    LOCAL_AI_MODEL: str = "nvidia/nemotron-3-nano-30b-a3b"
-    AI_TIMEOUT_MS: int = 2500
-
     # Brevo transactional email
     BREVO_API_KEY: str = ""
     BREVO_SENDER_EMAIL: str = "shubhkumarsinha192@gmail.com"
     BREVO_SENDER_NAME: str = "OmniMart AI"
 
-    # OTP
-    OTP_TTL_SECONDS: int = 300
-    OTP_MAX_ATTEMPTS: int = 5
-
     # Seeder
     SEED_DEMO_DATA: bool = True
-
-    @property
-    def nvidia_keys(self) -> list[str]:
-        return [k.strip() for k in self.NVIDIA_API_KEYS.split(",") if k.strip()]
 
     @property
     def raw_brevo_api_key(self) -> str:

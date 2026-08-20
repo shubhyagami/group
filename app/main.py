@@ -9,18 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from .api import (
-    admin,
     auth,
     cart,
-    chat,
-    compare,
     orders,
-    otp,
     products,
     profile,
     recommendations,
     search,
-    telemetry,
 )
 from .config import settings
 from .database import Base, engine
@@ -46,10 +41,9 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description=(
-        "Autonomous AI-Powered E-Commerce & Recommendation Platform backend. "
+        "AI-Powered E-Commerce & Recommendation Platform backend. "
         "Hybrid recommendation engine, NLP sentiment analytics, natural-language search, "
-        "multi-product comparison, conversational AI with safe tool routing, "
-        "session-cookie auth, Brevo transactional email and in-memory OTP."
+        "session-cookie auth and Brevo transactional email."
     ),
     lifespan=lifespan,
     docs_url="/docs",
@@ -78,13 +72,8 @@ for router in (
     cart.router,
     orders.router,
     profile.router,
-    chat.router,
     recommendations.router,
     search.router,
-    compare.router,
-    admin.router,
-    telemetry.router,
-    otp.router,
 ):
     app.include_router(router)
 
@@ -106,15 +95,9 @@ def root():
             "GET  /products/{slug}",
             "GET  /cart | POST /cart/add | /cart/update | /cart/remove",
             "POST /checkout | GET /orders | GET /orders/{id}",
-            "GET  /profile | POST /profile/address | PUT /profile/preferences",
             "GET  /wishlist | POST /wishlist/add | /wishlist/remove",
-            "POST /api/chat",
             "GET  /api/recommendations?limit=8",
-            "GET  /api/search/autocomplete?q= | POST /api/search/nl",
-            "GET  /api/compare/data?ids=1,2,3",
-            "POST /api/telemetry/interaction",
-            "POST /api/otp/send | /api/otp/verify",
-            "GET  /api/admin/analytics-data | POST /api/admin/ask-ai  (ADMIN)",
+            "GET  /api/search/autocomplete?q=",
         ],
     }
 

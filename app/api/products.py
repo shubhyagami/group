@@ -20,7 +20,6 @@ from ..services.feedback_service import CustomerFeedbackService
 from ..services.product_cards import product_to_card
 from ..services.recommendation_service import HybridRecommendationService
 from ..services.search_service import SearchService
-from ..services.telemetry_service import TelemetryService
 
 router = APIRouter(tags=["storefront"])
 

@@ -1,5 +1,5 @@
 """Automated data seeder: categories, brands, demo accounts, 100+ products,
-reviews + sentiment telemetry, orders, interactions, chat history.
+reviews + sentiment NLP, orders, interactions.
 
 Equivalent of the Spring Boot `DataSeeder` CommandLineRunner.
 """
@@ -17,13 +17,10 @@ from .database import SessionLocal
 from .enums import UserRole
 from .models import (
     Address,
-    AIRecommendationLog,
     Brand,
     Cart,
     CartItem,
     Category,
-    ChatConversation,
-    ChatMessage,
     Inventory,
     MarketProduct,
     Order,
@@ -405,40 +402,6 @@ def seed_database() -> None:
                         checked_at=datetime.utcnow() - timedelta(hours=rng.randint(0, 48)),
                     )
                 )
-
-        # ---------------------------------------------------------- chat history
-        conv = ChatConversation(
-            conversation_id=uuid.uuid4().hex, user_id=customer.id,
-            session_id=session_pool[0], title="Recommend a flagship phone under 60000",
-        )
-        db.add(conv)
-        db.flush()
-        db.add(
-            ChatMessage(
-                conversation_id=conv.id, sender="USER",
-                content="Recommend a flagship phone under ₹60,000",
-                created_at=datetime.utcnow() - timedelta(hours=2),
-            )
-        )
-        db.add(
-            ChatMessage(
-                conversation_id=conv.id, sender="ASSISTANT",
-                content="Based on your request, here are the best matches: 1. OnePlus 13R 5G - ₹42,999, rated 4.5★...",
-                tool_calls_json=json.dumps({"intent": "recommend", "tool": "searchProducts"}),
-                recommended_product_ids_json=json.dumps([p.id for p in products[:5]]),
-                reasoning_summary="Parsed budget <= ₹60000; ranked by hybrid score.",
-                created_at=datetime.utcnow() - timedelta(hours=2, minutes=1),
-            )
-        )
-        db.add(
-            AIRecommendationLog(
-                user_id=customer.id, query_text="Recommend a flagship phone under ₹60,000",
-                tool_used="searchProducts",
-                product_ids_json=json.dumps([p.id for p in products[:5]]),
-                provider_used="mock", execution_time_ms=42,
-                generated_reasoning="budget<=60000", created_at=datetime.utcnow() - timedelta(hours=2),
-            )
-        )
 
         db.commit()
         logger.info(
